@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Orbitron', sans-serif;
+  background: #0a0a0f;
+  overflow: hidden;
+}
+
+/* Neon glow effects */
+.neon-text {
+  text-shadow: 
+    0 0 5px currentColor,
+    0 0 10px currentColor,
+    0 0 20px currentColor,
+    0 0 40px currentColor;
+}
+
+.neon-border {
+  box-shadow: 
+    0 0 5px currentColor,
+    0 0 10px currentColor,
+    inset 0 0 5px currentColor;
+}
+
+/* Scrolling stars background */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+@keyframes scroll-stars {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(100%); }
+}
+
+.star {
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+/* Enemy animations */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes flash-red {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(2) hue-rotate(-40deg); }
+}
+
+.enemy-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.flash-error {
+  animation: flash-red 0.2s ease-in-out;
+}
+
+/* Explosion effect */
+@keyframes explode {
+  0% { 
+    transform: scale(1); 
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(2); 
+    opacity: 0.8;
+  }
+  100% { 
+    transform: scale(3); 
+    opacity: 0;
+  }
+}
+
+@keyframes explode-ring {
+  0% { 
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  100% { 
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes explode-core {
+  0% { 
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% { 
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes particle-fly {
+  0% { 
+    transform: rotate(var(--rotation, 0deg)) translateY(0);
+    opacity: 1;
+  }
+  100% { 
+    transform: rotate(var(--rotation, 0deg)) translateY(-60px);
+    opacity: 0;
+  }
+}
+
+.explosion {
+  animation: explode 0.4s ease-out forwards;
+}
+
+.explosion-animation {
+  animation: explode 0.5s ease-out forwards;
+}
+
+/* Shake animation for errors */
+@keyframes shake {
+  0%, 100% { transform: translate(-50%, -50%) translateX(0); }
+  20% { transform: translate(-50%, -50%) translateX(-8px); }
+  40% { transform: translate(-50%, -50%) translateX(8px); }
+  60% { transform: translate(-50%, -50%) translateX(-6px); }
+  80% { transform: translate(-50%, -50%) translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Projectile animation */
+@keyframes shoot {
+  from { opacity: 1; }
+  to { opacity: 0.8; }
+}
+
+.projectile {
+  animation: shoot 0.1s linear infinite alternate;
+}
+
+/* Player ship glow */
+@keyframes ship-glow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 10px #00ffff) drop-shadow(0 0 20px #00ffff);
+  }
+  50% { 
+    filter: drop-shadow(0 0 15px #00ffff) drop-shadow(0 0 30px #00ffff);
+  }
+}
+
+.player-ship {
+  animation: ship-glow 2s ease-in-out infinite;
+}
+
+/* Level up animation */
+@keyframes level-up {
+  0% { 
+    transform: scale(0.5); 
+    opacity: 0;
+  }
+  50% { 
+    transform: scale(1.2); 
+    opacity: 1;
+  }
+  100% { 
+    transform: scale(1); 
+    opacity: 0;
+  }
+}
+
+.level-up-flash {
+  animation: level-up 1.5s ease-out forwards;
+}
+
+/* Typing indicator */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
