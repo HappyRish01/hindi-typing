@@ -127,14 +127,14 @@ export default function LandingPage() {
         {/* Prominent Play Now Button */}
         <div className="flex flex-col items-center gap-8 mb-12">
           <Link 
-            to="/game?autostart=true"
+            to="/game"
             className="group px-20 py-10 md:px-32 md:py-14 bg-gradient-to-r from-green-500 via-cyan-500 to-purple-600 rounded-3xl font-black text-4xl md:text-6xl hover:shadow-2xl hover:shadow-cyan-500/60 transition-all transform hover:scale-110 flex items-center gap-6 animate-pulse hover:animate-none border-4 border-white/20"
           >
             <span className="text-5xl md:text-7xl">🎮</span>
             <span>PLAY NOW</span>
             <span className="group-hover:translate-x-3 transition-transform text-5xl md:text-7xl">🚀</span>
           </Link>
-          <p className="text-gray-300 text-xl md:text-2xl">Click to start the game instantly!</p>
+          <p className="text-gray-300 text-xl md:text-2xl">Click to start the game!</p>
         </div>
       </section>
 

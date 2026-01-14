@@ -8,8 +8,20 @@ import {
   WORD_COUNTS 
 } from './data/wordDataset';
 
+// Import round-based words
+import {
+  ROUND_CONFIG,
+  TOTAL_ROUNDS,
+  getWordsForRound,
+  getRoundConfig,
+  getRandomWordForRound,
+} from './data/roundWords';
+
 // Re-export for backward compatibility
 export { EASY_WORDS, MEDIUM_WORDS, HARD_WORDS, getWordPoolForLevel, getRandomWord, WORD_COUNTS };
+
+// Re-export round-based functions
+export { ROUND_CONFIG, TOTAL_ROUNDS, getWordsForRound, getRoundConfig, getRandomWordForRound };
 
 // Get speed multiplier based on level
 export const getSpeedForLevel = (level) => {

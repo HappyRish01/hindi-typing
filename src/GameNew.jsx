@@ -11,19 +11,19 @@ import {
   TypingIndicator,
   LevelUpNotification,
   GameOverScreen,
+  RoundSelect,
   DifficultySelect,
   RoundCompleteScreen,
   GameCompleteScreen,
-  PauseScreen,
 } from './components/GameComponentsNew';
 
 function Game() {
   const {
     gameState,
-    isPaused,
     currentRound,
     roundProgress,
     roundConfig,
+    totalRounds,
     difficulty,
     score,
     lives,
@@ -41,12 +41,11 @@ function Game() {
     playWordCompleteSound,
     playLifeLostSound,
     playRoundCompleteSound,
+    selectRound,
     selectDifficultyAndStart,
-    goToDifficultySelect,
+    goToRoundSelect,
     continueToNextRound,
     retryRound,
-    togglePause,
-    resumeGame,
     removeExplosion,
     hideLevelUp,
   } = useGameState();
@@ -111,12 +110,21 @@ function Game() {
         }}
       />
 
+      {/* Round selection screen */}
+      {gameState === 'round-select' && (
+        <RoundSelect 
+          onSelectRound={selectRound} 
+          totalRounds={totalRounds}
+        />
+      )}
+
       {/* Difficulty selection screen */}
       {gameState === 'difficulty-select' && (
         <DifficultySelect 
           currentRound={currentRound}
           roundConfig={roundConfig}
           onSelectDifficulty={selectDifficultyAndStart}
+          onBack={goToRoundSelect}
         />
       )}
 
@@ -133,7 +141,6 @@ function Game() {
             maxLives={maxLives}
             wpm={wpm}
             accuracy={accuracy}
-            onPause={togglePause}
           />
 
           {/* Enemies */}
@@ -180,21 +187,6 @@ function Game() {
           {showLevelUp && (
             <LevelUpNotification level={currentRound} onComplete={hideLevelUp} />
           )}
-
-          {/* Pause screen overlay */}
-          {isPaused && (
-            <PauseScreen
-              currentRound={currentRound}
-              score={score}
-              lives={lives}
-              maxLives={maxLives}
-              roundProgress={roundProgress}
-              roundConfig={roundConfig}
-              onResume={resumeGame}
-              onRestart={retryRound}
-              onHome={goToDifficultySelect}
-            />
-          )}
         </>
       )}
 
@@ -202,13 +194,14 @@ function Game() {
       {gameState === 'round-complete' && (
         <RoundCompleteScreen
           currentRound={currentRound}
+          totalRounds={totalRounds}
           score={score}
           wpm={wpm}
           accuracy={accuracy}
           wordsDestroyed={wordsDestroyed}
           onContinue={continueToNextRound}
           onRetry={retryRound}
-          onHome={goToDifficultySelect}
+          onHome={goToRoundSelect}
         />
       )}
 
@@ -223,7 +216,7 @@ function Game() {
           roundProgress={roundProgress}
           roundConfig={roundConfig}
           onRestart={retryRound}
-          onHome={goToDifficultySelect}
+          onHome={goToRoundSelect}
         />
       )}
 
@@ -231,14 +224,9 @@ function Game() {
       {gameState === 'game-complete' && (
         <GameCompleteScreen
           score={score}
-          onHome={goToDifficultySelect}
+          onHome={goToRoundSelect}
         />
       )}
-
-      {/* Audio elements for sound effects */}
-      <audio ref={wordCompleteSoundRef} src="/sounds/word-complete.mp3" preload="auto" />
-      <audio ref={lifeLostSoundRef} src="/sounds/life-lost.mp3" preload="auto" />
-      <audio ref={roundCompleteSoundRef} src="/sounds/word-complete.mp3" preload="auto" />
     </div>
   );
 }

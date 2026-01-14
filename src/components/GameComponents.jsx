@@ -111,7 +111,7 @@ export const Explosion = memo(function Explosion({ x, y, onComplete }) {
 });
 
 // HUD component
-export const HUD = memo(function HUD({ score, level, lives, wpm, accuracy }) {
+export const HUD = memo(function HUD({ score, level, lives, maxLives = 5, wpm, accuracy }) {
   return (
     <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-20">
       {/* Left side - Score and Level */}
@@ -126,9 +126,9 @@ export const HUD = memo(function HUD({ score, level, lives, wpm, accuracy }) {
         </div>
       </div>
 
-      {/* Center - Lives */}
+      {/* Center - Lives (dynamic based on maxLives) */}
       <div className="flex gap-2">
-        {Array.from({ length: 5 }).map((_, i) => (
+        {Array.from({ length: maxLives }).map((_, i) => (
           <div
             key={i}
             className={`text-2xl transition-all duration-300 ${
@@ -307,6 +307,68 @@ export const StartScreen = memo(function StartScreen({ onStart }) {
 
         <p className="text-gray-500 text-sm mt-6">
           Use Mangal keyboard layout for Hindi typing
+        </p>
+      </div>
+    </div>
+  );
+});
+
+// Difficulty selection screen
+export const DifficultySelect = memo(function DifficultySelect({ onSelectDifficulty }) {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center z-40 bg-black/90">
+      <div className="text-center p-8">
+        <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mb-4">
+          SELECT DIFFICULTY
+        </h1>
+        
+        <p className="text-gray-400 text-lg mb-8 max-w-md mx-auto">
+          Choose your challenge level
+        </p>
+
+        <div className="flex flex-col gap-4 max-w-sm mx-auto">
+          {/* Beginner */}
+          <button
+            onClick={() => onSelectDifficulty('beginner')}
+            className="px-8 py-4 bg-gradient-to-r from-green-600 to-green-500 text-white font-bold text-xl rounded-lg
+                       hover:from-green-500 hover:to-green-400 transition-all duration-300 transform hover:scale-105
+                       border-2 border-green-400"
+          >
+            <div className="flex items-center justify-between">
+              <span>🌱 BEGINNER</span>
+              <span className="text-sm opacity-80">7 Lives • Slow</span>
+            </div>
+          </button>
+
+          {/* Normal */}
+          <button
+            onClick={() => onSelectDifficulty('normal')}
+            className="px-8 py-4 bg-gradient-to-r from-cyan-600 to-blue-500 text-white font-bold text-xl rounded-lg
+                       hover:from-cyan-500 hover:to-blue-400 transition-all duration-300 transform hover:scale-105
+                       border-2 border-cyan-400"
+          >
+            <div className="flex items-center justify-between">
+              <span>⚡ NORMAL</span>
+              <span className="text-sm opacity-80">5 Lives • Medium</span>
+            </div>
+          </button>
+
+          {/* Hard */}
+          <button
+            onClick={() => onSelectDifficulty('hard')}
+            className="px-8 py-4 bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold text-xl rounded-lg
+                       hover:from-red-500 hover:to-orange-400 transition-all duration-300 transform hover:scale-105
+                       border-2 border-red-400"
+          >
+            <div className="flex items-center justify-between">
+              <span>🔥 HARD</span>
+              <span className="text-sm opacity-80">3 Lives • Fast</span>
+            </div>
+          </button>
+        </div>
+
+        <p className="text-gray-500 text-sm mt-8">
+          Press a button to start the game
         </p>
       </div>
     </div>
