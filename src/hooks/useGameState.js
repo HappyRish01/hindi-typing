@@ -48,6 +48,13 @@ export function useGameState(autoStart = false) {
   const spawnIntervalRef = useRef(null);
   const startTimeRef = useRef(autoStart ? Date.now() : null);
   const lastFrameTimeRef = useRef(autoStart ? Date.now() : null);
+  const lastVisualUpdateRef = useRef(Date.now());
+
+  // Keep mutable refs for arrays to avoid updating React state every frame
+  const enemiesRef = useRef(enemies);
+  const projectilesRef = useRef(projectiles);
+  const explosionsRef = useRef(explosions);
+  const activeTargetIdRef = useRef(activeTargetId);
 
   // Start game
   const startGame = useCallback(() => {
@@ -67,6 +74,11 @@ export function useGameState(autoStart = false) {
     setCorrectCharsTyped(0);
     startTimeRef.current = Date.now();
     lastFrameTimeRef.current = Date.now();
+    // reset refs
+    enemiesRef.current = [];
+    projectilesRef.current = [];
+    explosionsRef.current = [];
+    activeTargetIdRef.current = null;
   }, []);
 
   // Auto-start initialization
@@ -79,26 +91,24 @@ export function useGameState(autoStart = false) {
 
   // Spawn enemy (only if under max limit)
   const spawnEnemy = useCallback(() => {
-    setEnemies(prev => {
-      const maxEnemies = getMaxEnemiesForLevel(level);
-      if (prev.length >= maxEnemies) {
-        return prev; // Don't spawn if at max
-      }
-      
-      const wordPool = getWordPoolForLevel(level);
-      const word = getRandomWord(wordPool);
-      const x = ENEMY_SPAWN_MARGIN + Math.random() * (GAME_WIDTH - 2 * ENEMY_SPAWN_MARGIN);
-      
-      const newEnemy = {
-        id: generateId(),
-        word,
-        x,
-        y: -50,
-        speed: getSpeedForLevel(level),
-      };
-      
-      return [...prev, newEnemy];
-    });
+    const maxEnemies = getMaxEnemiesForLevel(level);
+    if (enemiesRef.current.length >= maxEnemies) return;
+
+    const wordPool = getWordPoolForLevel(level);
+    const word = getRandomWord(wordPool);
+    const x = ENEMY_SPAWN_MARGIN + Math.random() * (GAME_WIDTH - 2 * ENEMY_SPAWN_MARGIN);
+
+    const newEnemy = {
+      id: generateId(),
+      word,
+      x,
+      y: -50,
+      speed: getSpeedForLevel(level),
+    };
+
+    enemiesRef.current = [...enemiesRef.current, newEnemy];
+    // update React state once (spawn event)
+    setEnemies(enemiesRef.current);
   }, [level]);
 
   // Find matching target for input
@@ -173,32 +183,35 @@ export function useGameState(autoStart = false) {
       if (e.key !== 'Dead') return;
     }
     
-    // Always add the character to input
-    const newInput = currentInput + e.key;
-    setCurrentInput(newInput);
-    setTotalCharsTyped(prev => prev + 1);
-    
-    // Find matching target
-    const matchingEnemy = findMatchingTarget(newInput, enemies);
-    
-    if (matchingEnemy) {
-      setActiveTargetId(matchingEnemy.id);
-      setCorrectCharsTyped(prev => prev + 1);
-      
-      // Check if word is complete
-      const graphemes = splitIntoGraphemes(matchingEnemy.word);
-      const inputGraphemes = splitIntoGraphemes(newInput);
-      
-      if (inputGraphemes.length === graphemes.length) {
-        // Word completed! Destroy enemy
-        destroyEnemy(matchingEnemy);
-        setCurrentInput('');
+    // Always add the character to input - use functional update to avoid stale closures
+    setCurrentInput(prevInput => {
+      const newInput = prevInput + e.key;
+      setTotalCharsTyped(prev => prev + 1);
+
+      // Find matching target using the mutable ref (latest positions)
+      const matchingEnemy = findMatchingTarget(newInput, enemiesRef.current);
+
+      if (matchingEnemy) {
+        setActiveTargetId(matchingEnemy.id);
+        setCorrectCharsTyped(prev => prev + 1);
+
+        // Check if word is complete
+        const graphemes = splitIntoGraphemes(matchingEnemy.word);
+        const inputGraphemes = splitIntoGraphemes(newInput);
+
+        if (inputGraphemes.length === graphemes.length) {
+          // Word completed! Destroy enemy
+          destroyEnemy(matchingEnemy);
+          setActiveTargetId(null);
+          return '';
+        }
+      } else {
+        // No match - clear active target but keep input visible
         setActiveTargetId(null);
       }
-    } else {
-      // No match - clear active target but keep input visible
-      setActiveTargetId(null);
-    }
+
+      return newInput;
+    });
   }, [gameState, currentInput, enemies, activeTargetId, findMatchingTarget]);
 
   // Destroy enemy - Fire projectile first, then destroy on impact
@@ -208,7 +221,7 @@ export function useGameState(autoStart = false) {
     const projectileId = generateId();
     
     // Fire projectile toward the enemy
-    setProjectiles(prev => [...prev, {
+    projectilesRef.current = [...projectilesRef.current, {
       id: projectileId,
       startX: shipX,
       startY: shipY,
@@ -216,12 +229,12 @@ export function useGameState(autoStart = false) {
       targetY: enemy.y,
       targetEnemyId: enemy.id,
       progress: 0,
-    }]);
+    }];
+    setProjectiles(projectilesRef.current);
     
     // Mark enemy as "hit" (will be destroyed when projectile arrives)
-    setEnemies(prev => prev.map(e => 
-      e.id === enemy.id ? { ...e, isHit: true } : e
-    ));
+    enemiesRef.current = enemiesRef.current.map(e => e.id === enemy.id ? { ...e, isHit: true } : e);
+    setEnemies(enemiesRef.current);
     
     // Update score immediately for responsiveness
     const wordLength = splitIntoGraphemes(enemy.word).length;
@@ -258,69 +271,66 @@ export function useGameState(autoStart = false) {
       const now = Date.now();
       const deltaTime = Math.min((now - lastFrameTimeRef.current) / 16.67, 3); // Cap deltaTime to prevent huge jumps
       lastFrameTimeRef.current = now;
-      
-      // Update enemy positions
-      setEnemies(prev => {
-        const updated = prev.map(enemy => ({
-          ...enemy,
-          y: enemy.isHit ? enemy.y : enemy.y + enemy.speed * deltaTime, // Don't move hit enemies
-        }));
-        
-        // Check for enemies reaching bottom (only non-hit ones)
-        const enemiesReachedBottom = updated.filter(e => e.y >= BOTTOM_THRESHOLD && !e.isHit);
-        
-        if (enemiesReachedBottom.length > 0) {
-          // Lose lives for enemies that reached bottom
-          setLives(l => {
-            const newLives = l - enemiesReachedBottom.length;
-            if (newLives <= 0) {
-              setGameState('gameover');
-            }
-            return Math.max(0, newLives);
-          });
-          
-          // Clear input if active target reached bottom
-          enemiesReachedBottom.forEach(enemy => {
-            if (activeTargetId === enemy.id) {
-              setCurrentInput('');
-              setActiveTargetId(null);
-            }
-          });
-        }
-        
-        return updated.filter(e => e.y < BOTTOM_THRESHOLD);
-      });
-      
-      // Update projectiles and handle impacts
-      setProjectiles(prev => {
-        const updated = prev.map(p => ({ ...p, progress: p.progress + 0.15 }));
-        
-        // Check for projectiles that reached their target
-        const completedProjectiles = updated.filter(p => p.progress >= 1 && p.targetEnemyId);
-        
-        if (completedProjectiles.length > 0) {
-          completedProjectiles.forEach(p => {
-            // Create explosion at target position
-            setExplosions(ex => [...ex, { 
-              id: generateId(), 
-              x: p.targetX, 
-              y: p.targetY
-            }]);
-            // Remove the hit enemy
-            setEnemies(en => en.filter(e => e.id !== p.targetEnemyId));
-          });
-        }
-        
-        return updated.filter(p => p.progress < 1);
-      });
-      
-      // Calculate WPM
-      const elapsed = now - startTimeRef.current;
-      setWpm(calculateWPM(wordsDestroyed, elapsed));
-      
-      // Calculate accuracy
-      setAccuracy(calculateAccuracy(correctCharsTyped, totalCharsTyped));
-      
+
+      // Update enemy positions (mutating refs, not React state every frame)
+      enemiesRef.current = enemiesRef.current.map(enemy => ({
+        ...enemy,
+        y: enemy.isHit ? enemy.y : enemy.y + enemy.speed * deltaTime,
+      }));
+
+      // Check for enemies reaching bottom (only non-hit ones)
+      const enemiesReachedBottom = enemiesRef.current.filter(e => e.y >= BOTTOM_THRESHOLD && !e.isHit);
+      if (enemiesReachedBottom.length > 0) {
+        // Lose lives for enemies that reached bottom
+        setLives(l => {
+          const newLives = l - enemiesReachedBottom.length;
+          if (newLives <= 0) {
+            setGameState('gameover');
+          }
+          return Math.max(0, newLives);
+        });
+
+        // Clear input if active target reached bottom
+        enemiesReachedBottom.forEach(enemy => {
+          if (activeTargetIdRef.current === enemy.id) {
+            setCurrentInput('');
+            setActiveTargetId(null);
+            activeTargetIdRef.current = null;
+          }
+        });
+
+        enemiesRef.current = enemiesRef.current.filter(e => e.y < BOTTOM_THRESHOLD);
+      }
+
+      // Update projectiles (progress) and handle impacts
+      projectilesRef.current = projectilesRef.current.map(p => ({ ...p, progress: p.progress + 0.15 }));
+
+      const completedProjectiles = projectilesRef.current.filter(p => p.progress >= 1 && p.targetEnemyId);
+      if (completedProjectiles.length > 0) {
+        completedProjectiles.forEach(p => {
+          // Create explosion at target position
+          explosionsRef.current = [...explosionsRef.current, { id: generateId(), x: p.targetX, y: p.targetY }];
+          // Remove the hit enemy from refs
+          enemiesRef.current = enemiesRef.current.filter(e => e.id !== p.targetEnemyId);
+        });
+
+        // cleanup completed projectiles
+        projectilesRef.current = projectilesRef.current.filter(p => p.progress < 1);
+      }
+
+      // Throttle visual React updates to reduce renders (update every ~50ms for smoother visuals)
+      if (now - lastVisualUpdateRef.current >= 50) {
+        lastVisualUpdateRef.current = now;
+        setEnemies([...enemiesRef.current]);
+        setProjectiles([...projectilesRef.current]);
+        setExplosions([...explosionsRef.current]);
+
+        // Update WPM and accuracy at throttled rate
+        const elapsed = now - startTimeRef.current;
+        setWpm(calculateWPM(wordsDestroyed, elapsed));
+        setAccuracy(calculateAccuracy(correctCharsTyped, totalCharsTyped));
+      }
+
       gameLoopRef.current = requestAnimationFrame(gameLoop);
     };
     
@@ -362,8 +372,14 @@ export function useGameState(autoStart = false) {
 
   // Remove explosion after animation
   const removeExplosion = useCallback((id) => {
-    setExplosions(prev => prev.filter(e => e.id !== id));
+    explosionsRef.current = explosionsRef.current.filter(e => e.id !== id);
+    setExplosions(explosionsRef.current);
   }, []);
+
+  // Sync activeTargetIdRef when it changes
+  useEffect(() => {
+    activeTargetIdRef.current = activeTargetId;
+  }, [activeTargetId]);
 
   // Hide level up notification
   const hideLevelUp = useCallback(() => {

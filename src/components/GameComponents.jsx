@@ -1,28 +1,29 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
 
-// Stars background component
-export const StarField = memo(function StarField() {
-  const stars = Array.from({ length: 100 }, (_, i) => ({
-    id: i,
-    left: Math.random() * 100,
-    top: Math.random() * 100,
-    size: Math.random() * 2 + 1,
-    delay: Math.random() * 3,
-  }));
+// Pre-generate stars once (static, no animation for performance)
+const STATIC_STARS = Array.from({ length: 50 }, (_, i) => ({
+  id: i,
+  left: Math.random() * 100,
+  top: Math.random() * 100,
+  size: Math.random() * 2 + 1,
+  opacity: 0.3 + Math.random() * 0.7,
+}));
 
+// Stars background component - simplified for performance
+export const StarField = memo(function StarField() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {stars.map((star) => (
+      {STATIC_STARS.map((star) => (
         <div
           key={star.id}
-          className="absolute rounded-full bg-white star"
+          className="absolute rounded-full bg-white"
           style={{
             left: `${star.left}%`,
             top: `${star.top}%`,
             width: `${star.size}px`,
             height: `${star.size}px`,
-            animationDelay: `${star.delay}s`,
+            opacity: star.opacity,
           }}
         />
       ))}
@@ -71,7 +72,7 @@ export const PlayerShip = memo(function PlayerShip() {
   );
 });
 
-// Projectile component - laser beam effect
+// Projectile component - simplified for performance
 export const Projectile = memo(function Projectile({ x, y }) {
   return (
     <div
@@ -82,20 +83,13 @@ export const Projectile = memo(function Projectile({ x, y }) {
         transform: 'translate(-50%, -50%)',
       }}
     >
-      {/* Main laser beam */}
-      <div className="relative">
-        {/* Glow effect */}
-        <div className="absolute -inset-2 bg-cyan-400/50 blur-md rounded-full" />
-        {/* Core beam */}
-        <div className="w-3 h-10 bg-gradient-to-t from-cyan-400 via-cyan-200 to-white rounded-full shadow-[0_0_20px_#00ffff,0_0_40px_#00ffff]" />
-        {/* Trail */}
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 w-2 h-6 bg-gradient-to-t from-transparent via-cyan-500/50 to-cyan-400 rounded-full" />
-      </div>
+      {/* Simple laser beam */}
+      <div className="w-2 h-8 bg-cyan-400 rounded-full" style={{ boxShadow: '0 0 8px #00ffff' }} />
     </div>
   );
 });
 
-// Explosion effect component - bigger and more impressive
+// Explosion effect component - simplified for performance
 export const Explosion = memo(function Explosion({ x, y, onComplete }) {
   return (
     <div
@@ -108,26 +102,9 @@ export const Explosion = memo(function Explosion({ x, y, onComplete }) {
       onAnimationEnd={onComplete}
     >
       <div className="relative">
-        {/* Main flash */}
-        <div className="absolute w-24 h-24 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/90 animate-ping" />
-        
-        {/* Explosion rings */}
-        <div className="absolute w-32 h-32 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-orange-500/80 animate-[explode-ring_0.5s_ease-out]" />
-        <div className="absolute w-24 h-24 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-yellow-400 animate-[explode-ring_0.4s_ease-out]" />
-        <div className="absolute w-16 h-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-yellow-300 via-orange-400 to-red-500 animate-[explode-core_0.3s_ease-out]" />
-        
-        {/* Particles flying out */}
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-3 h-3 rounded-full animate-[particle-fly_0.6s_ease-out_forwards]"
-            style={{
-              background: i % 2 === 0 ? '#f97316' : '#facc15',
-              transform: `rotate(${i * 30}deg)`,
-              animationDelay: `${i * 0.02}s`,
-            }}
-          />
-        ))}
+        {/* Main flash - simplified */}
+        <div className="absolute w-20 h-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-400 animate-[explode-core_0.4s_ease-out]" />
+        <div className="absolute w-12 h-12 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300 animate-[explode-core_0.3s_ease-out]" />
       </div>
     </div>
   );
