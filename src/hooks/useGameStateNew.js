@@ -201,6 +201,12 @@ export function useGameState(autoStart = false) {
     setCurrentInput('');
     setActiveTargetId(null);
     activeTargetIdRef.current = null;
+    // Resume the game after changing difficulty
+    if (pauseStartTimeRef.current) {
+      totalPausedTimeRef.current += Date.now() - pauseStartTimeRef.current;
+      pauseStartTimeRef.current = null;
+    }
+    setIsPaused(false);
   }, []);
 
   // Upgrade to next difficulty (called when completing WORDS_PER_DIFFICULTY words)
