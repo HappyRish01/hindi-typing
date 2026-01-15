@@ -17,6 +17,12 @@ const GAME_HEIGHT = typeof window !== 'undefined' ? window.innerHeight : 800;
 const ENEMY_SPAWN_MARGIN = 100;
 const BOTTOM_THRESHOLD = GAME_HEIGHT - 100;
 
+// Words needed to complete each difficulty within a round
+const WORDS_PER_DIFFICULTY = 20;
+
+// Difficulty order for auto-progression
+const DIFFICULTY_ORDER = ['beginner', 'normal', 'hard'];
+
 // Difficulty settings (affects speed, spawn rate, lives)
 const DIFFICULTY_SETTINGS = {
   beginner: {
@@ -24,20 +30,20 @@ const DIFFICULTY_SETTINGS = {
     spawnMultiplier: 1.8,
     maxEnemiesMultiplier: 0.6,
     lives: 7,
-    label: 'Beginner',
-    labelHindi: 'शुरुआती',
+    label: 'Easy',
+    labelHindi: 'आसान',
     color: 'from-green-400 to-green-600',
-    description: 'धीमी गति, अधिक जीवन',
+    description: 'Slow speed, more lives',
   },
   normal: {
     speedMultiplier: 1.0,
     spawnMultiplier: 1.0,
     maxEnemiesMultiplier: 1.0,
     lives: 5,
-    label: 'Normal',
-    labelHindi: 'सामान्य',
+    label: 'Medium',
+    labelHindi: 'मध्यम',
     color: 'from-yellow-400 to-orange-500',
-    description: 'मानक गति और जीवन',
+    description: 'Standard speed and lives',
   },
   hard: {
     speedMultiplier: 1.5,
@@ -47,23 +53,25 @@ const DIFFICULTY_SETTINGS = {
     label: 'Hard',
     labelHindi: 'कठिन',
     color: 'from-red-500 to-red-700',
-    description: 'तेज़ गति, कम जीवन',
+    description: 'Fast speed, fewer lives',
   },
 };
 
 export function useGameState(autoStart = false) {
-  // Game flow states: 'difficulty-select' -> 'playing' -> 'round-complete' / 'gameover'
-  const [gameState, setGameState] = useState('difficulty-select');
+  // Game flow states: 'round-select' -> 'playing' -> 'round-complete' / 'gameover'
+  const [gameState, setGameState] = useState('round-select');
   
   // Pause state
   const [isPaused, setIsPaused] = useState(false);
   
   // Round system (1-4) - starts at 1
   const [currentRound, setCurrentRound] = useState(1);
-  const [roundProgress, setRoundProgress] = useState(0);
   
-  // Difficulty
-  const [difficulty, setDifficulty] = useState('normal');
+  // Progress within current difficulty (0 to WORDS_PER_DIFFICULTY)
+  const [difficultyProgress, setDifficultyProgress] = useState(0);
+  
+  // Difficulty within round (beginner -> normal -> hard)
+  const [difficulty, setDifficulty] = useState('beginner');
   
   // Game stats
   const [score, setScore] = useState(0);
@@ -88,6 +96,7 @@ export function useGameState(autoStart = false) {
   
   // Notifications
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [showDifficultyUp, setShowDifficultyUp] = useState(false);
 
   // Sound event triggers
   const [playWordCompleteSound, setPlayWordCompleteSound] = useState(0);
@@ -130,22 +139,17 @@ export function useGameState(autoStart = false) {
   const roundConfig = getRoundConfig(currentRound);
   const difficultySettings = DIFFICULTY_SETTINGS[difficulty];
 
-  // Select round and go to difficulty selection
-  const selectRound = useCallback((round) => {
+  // Select round and start playing (with optional starting difficulty for practice)
+  const selectRoundAndStart = useCallback((round, startingDifficulty = 'beginner') => {
     setCurrentRound(round);
-    setGameState('difficulty-select');
-  }, []);
-
-  // Select difficulty and start playing
-  const selectDifficultyAndStart = useCallback((selectedDifficulty) => {
-    setDifficulty(selectedDifficulty);
-    const settings = DIFFICULTY_SETTINGS[selectedDifficulty];
+    setDifficulty(startingDifficulty);
+    const settings = DIFFICULTY_SETTINGS[startingDifficulty];
     
     setGameState('playing');
     setScore(0);
     setLives(settings.lives);
     setWordsDestroyed(0);
-    setRoundProgress(0);
+    setDifficultyProgress(0);
     setEnemies([]);
     setProjectiles([]);
     setExplosions([]);
@@ -155,6 +159,7 @@ export function useGameState(autoStart = false) {
     setAccuracy(100);
     setTotalCharsTyped(0);
     setCorrectCharsTyped(0);
+    setIsPaused(false);
     startTimeRef.current = Date.now();
     lastFrameTimeRef.current = Date.now();
     
@@ -166,10 +171,10 @@ export function useGameState(autoStart = false) {
     recentWordsRef.current = [];
   }, []);
 
-  // Go back to difficulty selection (reset to round 1)
-  const goToDifficultySelect = useCallback(() => {
-    setGameState('difficulty-select');
-    setCurrentRound(1); // Reset to round 1
+  // Go back to round selection
+  const goToRoundSelect = useCallback(() => {
+    setGameState('round-select');
+    setIsPaused(false);
     if (gameLoopRef.current) {
       cancelAnimationFrame(gameLoopRef.current);
     }
@@ -184,21 +189,66 @@ export function useGameState(autoStart = false) {
     explosionsRef.current = [];
   }, []);
 
-  // Continue to next round
+  // Change difficulty during pause (for practice)
+  const changeDifficulty = useCallback((newDifficulty) => {
+    setDifficulty(newDifficulty);
+    const settings = DIFFICULTY_SETTINGS[newDifficulty];
+    setLives(settings.lives);
+    setDifficultyProgress(0);
+    // Clear current enemies when changing difficulty
+    setEnemies([]);
+    enemiesRef.current = [];
+    setCurrentInput('');
+    setActiveTargetId(null);
+    activeTargetIdRef.current = null;
+  }, []);
+
+  // Upgrade to next difficulty (called when completing WORDS_PER_DIFFICULTY words)
+  const upgradeDifficulty = useCallback(() => {
+    const currentIndex = DIFFICULTY_ORDER.indexOf(difficulty);
+    
+    if (currentIndex < DIFFICULTY_ORDER.length - 1) {
+      // Move to next difficulty
+      const nextDifficulty = DIFFICULTY_ORDER[currentIndex + 1];
+      setDifficulty(nextDifficulty);
+      const settings = DIFFICULTY_SETTINGS[nextDifficulty];
+      setLives(settings.lives);
+      setDifficultyProgress(0);
+      setShowDifficultyUp(true);
+      
+      // Clear enemies for fresh start at new difficulty
+      setEnemies([]);
+      enemiesRef.current = [];
+      setCurrentInput('');
+      setActiveTargetId(null);
+      activeTargetIdRef.current = null;
+    } else {
+      // Completed Hard difficulty - Round is complete!
+      setPlayRoundCompleteSound(prev => prev + 1);
+      setTimeout(() => {
+        setGameState('round-complete');
+      }, 500);
+    }
+  }, [difficulty]);
+
+  // Continue to next round (starts at beginner difficulty)
   const continueToNextRound = useCallback(() => {
     if (currentRound < TOTAL_ROUNDS) {
-      setCurrentRound(prev => prev + 1);
-      setGameState('difficulty-select');
+      selectRoundAndStart(currentRound + 1, 'beginner');
     } else {
       setGameState('game-complete');
     }
-  }, [currentRound]);
+  }, [currentRound, selectRoundAndStart]);
 
-  // Retry current round
+  // Retry current round (start from beginner)
   const retryRound = useCallback(() => {
-    setGameState('difficulty-select');
-    setIsPaused(false);
-  }, []);
+    selectRoundAndStart(currentRound, 'beginner');
+  }, [currentRound, selectRoundAndStart]);
+
+  // Restart from current difficulty
+  const restartFromCurrentDifficulty = useCallback(() => {
+    selectRoundAndStart(currentRound, difficulty);
+  }, [currentRound, difficulty, selectRoundAndStart]);
 
   // Toggle pause
   const togglePause = useCallback(() => {
@@ -232,8 +282,8 @@ export function useGameState(autoStart = false) {
 
   // Legacy start game function
   const startGame = useCallback(() => {
-    goToDifficultySelect();
-  }, [goToDifficultySelect]);
+    goToRoundSelect();
+  }, [goToRoundSelect]);
 
   // Spawn enemy
   const spawnEnemy = useCallback(() => {
@@ -323,26 +373,28 @@ export function useGameState(autoStart = false) {
     setEnemies(enemiesRef.current);
     
     const wordLength = splitIntoGraphemes(enemy.word).length;
+    const difficultyMultiplier = DIFFICULTY_ORDER.indexOf(difficultyRef.current) + 1;
     const roundMultiplier = currentRoundRef.current;
-    const points = wordLength * 100 * roundMultiplier;
+    const points = wordLength * 100 * roundMultiplier * difficultyMultiplier;
     setScore(prev => prev + points);
     
     setWordsDestroyed(prev => prev + 1);
     
-    setRoundProgress(prev => {
+    // Update difficulty progress
+    setDifficultyProgress(prev => {
       const newProgress = prev + 1;
-      const config = getRoundConfig(currentRoundRef.current);
       
-      if (newProgress >= config.wordsToComplete) {
-        setPlayRoundCompleteSound(p => p + 1);
+      // Check if we completed this difficulty (20 words)
+      if (newProgress >= WORDS_PER_DIFFICULTY) {
+        // Trigger difficulty upgrade after a short delay
         setTimeout(() => {
-          setGameState('round-complete');
-        }, 500);
+          upgradeDifficulty();
+        }, 300);
       }
       
       return newProgress;
     });
-  }, []);
+  }, [upgradeDifficulty]);
 
   // Hindi Mangal keyboard Shift+Number mappings (for keys that don't produce Hindi natively)
   const HINDI_SHIFT_NUMBER_MAP = {
@@ -580,15 +632,22 @@ export function useGameState(autoStart = false) {
     setShowLevelUp(false);
   }, []);
 
+  // Hide difficulty up notification
+  const hideDifficultyUp = useCallback(() => {
+    setShowDifficultyUp(false);
+  }, []);
+
   return {
     // State
     gameState,
     isPaused,
     currentRound,
-    roundProgress,
+    difficulty,
+    difficultyProgress,
+    wordsPerDifficulty: WORDS_PER_DIFFICULTY,
+    difficultyOrder: DIFFICULTY_ORDER,
     roundConfig,
     totalRounds: TOTAL_ROUNDS,
-    difficulty,
     difficultySettings,
     allDifficultySettings: DIFFICULTY_SETTINGS,
     score,
@@ -604,6 +663,7 @@ export function useGameState(autoStart = false) {
     wpm,
     accuracy,
     showLevelUp,
+    showDifficultyUp,
     
     // Sound triggers
     playWordCompleteSound,
@@ -612,13 +672,16 @@ export function useGameState(autoStart = false) {
     
     // Actions
     startGame,
-    selectDifficultyAndStart,
-    goToDifficultySelect,
+    selectRoundAndStart,
+    goToRoundSelect,
+    changeDifficulty,
     continueToNextRound,
     retryRound,
+    restartFromCurrentDifficulty,
     togglePause,
     resumeGame,
     removeExplosion,
     hideLevelUp,
+    hideDifficultyUp,
   };
 }

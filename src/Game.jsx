@@ -10,8 +10,9 @@ import {
   HUD,
   TypingIndicator,
   LevelUpNotification,
+  DifficultyUpNotification,
   GameOverScreen,
-  DifficultySelect,
+  RoundSelectScreen,
   RoundCompleteScreen,
   GameCompleteScreen,
   PauseScreen,
@@ -22,9 +23,12 @@ function Game() {
     gameState,
     isPaused,
     currentRound,
-    roundProgress,
-    roundConfig,
     difficulty,
+    difficultyProgress,
+    wordsPerDifficulty,
+    difficultySettings,
+    allDifficultySettings,
+    roundConfig,
     score,
     lives,
     maxLives,
@@ -38,17 +42,21 @@ function Game() {
     wpm,
     accuracy,
     showLevelUp,
+    showDifficultyUp,
     playWordCompleteSound,
     playLifeLostSound,
     playRoundCompleteSound,
-    selectDifficultyAndStart,
-    goToDifficultySelect,
+    selectRoundAndStart,
+    goToRoundSelect,
+    changeDifficulty,
     continueToNextRound,
     retryRound,
+    restartFromCurrentDifficulty,
     togglePause,
     resumeGame,
     removeExplosion,
     hideLevelUp,
+    hideDifficultyUp,
   } = useGameState();
 
   // Audio refs for sound effects
@@ -111,12 +119,10 @@ function Game() {
         }}
       />
 
-      {/* Difficulty selection screen */}
-      {gameState === 'difficulty-select' && (
-        <DifficultySelect 
-          currentRound={currentRound}
-          roundConfig={roundConfig}
-          onSelectDifficulty={selectDifficultyAndStart}
+      {/* Round selection screen */}
+      {gameState === 'round-select' && (
+        <RoundSelectScreen 
+          onSelectRound={(round) => selectRoundAndStart(round, 'beginner')}
         />
       )}
 
@@ -127,8 +133,10 @@ function Game() {
           <HUD
             score={score}
             currentRound={currentRound}
-            roundProgress={roundProgress}
-            roundConfig={roundConfig}
+            difficulty={difficulty}
+            difficultyProgress={difficultyProgress}
+            wordsPerDifficulty={wordsPerDifficulty}
+            difficultySettings={difficultySettings}
             lives={lives}
             maxLives={maxLives}
             wpm={wpm}
@@ -181,18 +189,31 @@ function Game() {
             <LevelUpNotification level={currentRound} onComplete={hideLevelUp} />
           )}
 
+          {/* Difficulty upgrade notification */}
+          {showDifficultyUp && (
+            <DifficultyUpNotification 
+              difficulty={difficulty} 
+              difficultySettings={difficultySettings}
+              onComplete={hideDifficultyUp} 
+            />
+          )}
+
           {/* Pause screen overlay */}
           {isPaused && (
             <PauseScreen
               currentRound={currentRound}
+              difficulty={difficulty}
+              difficultyProgress={difficultyProgress}
+              wordsPerDifficulty={wordsPerDifficulty}
+              difficultySettings={difficultySettings}
+              allDifficultySettings={allDifficultySettings}
               score={score}
               lives={lives}
               maxLives={maxLives}
-              roundProgress={roundProgress}
-              roundConfig={roundConfig}
               onResume={resumeGame}
-              onRestart={retryRound}
-              onHome={goToDifficultySelect}
+              onRestart={restartFromCurrentDifficulty}
+              onChangeDifficulty={changeDifficulty}
+              onHome={goToRoundSelect}
             />
           )}
         </>
@@ -208,7 +229,7 @@ function Game() {
           wordsDestroyed={wordsDestroyed}
           onContinue={continueToNextRound}
           onRetry={retryRound}
-          onHome={goToDifficultySelect}
+          onHome={goToRoundSelect}
         />
       )}
 
@@ -217,13 +238,15 @@ function Game() {
         <GameOverScreen
           score={score}
           currentRound={currentRound}
+          difficulty={difficulty}
+          difficultyProgress={difficultyProgress}
+          wordsPerDifficulty={wordsPerDifficulty}
+          difficultySettings={difficultySettings}
           wpm={wpm}
           accuracy={accuracy}
           wordsDestroyed={wordsDestroyed}
-          roundProgress={roundProgress}
-          roundConfig={roundConfig}
           onRestart={retryRound}
-          onHome={goToDifficultySelect}
+          onHome={goToRoundSelect}
         />
       )}
 
@@ -231,7 +254,7 @@ function Game() {
       {gameState === 'game-complete' && (
         <GameCompleteScreen
           score={score}
-          onHome={goToDifficultySelect}
+          onHome={goToRoundSelect}
         />
       )}
 

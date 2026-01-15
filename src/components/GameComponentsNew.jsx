@@ -108,9 +108,21 @@ export const Explosion = memo(function Explosion({ x, y, onComplete }) {
   );
 });
 
-// HUD component with round info
-export const HUD = memo(function HUD({ score, currentRound, roundProgress, roundConfig, lives, maxLives = 5, wpm, accuracy, onPause }) {
-  const progressPercent = roundConfig ? (roundProgress / roundConfig.wordsToComplete) * 100 : 0;
+// HUD component with round and difficulty info
+export const HUD = memo(function HUD({ 
+  score, 
+  currentRound, 
+  difficulty,
+  difficultyProgress,
+  wordsPerDifficulty,
+  difficultySettings,
+  lives, 
+  maxLives = 5, 
+  wpm, 
+  accuracy, 
+  onPause 
+}) {
+  const progressPercent = (difficultyProgress / wordsPerDifficulty) * 100;
   
   return (
     <div className="absolute top-0 left-0 right-0 p-4 z-20">
@@ -168,16 +180,16 @@ export const HUD = memo(function HUD({ score, currentRound, roundProgress, round
         </div>
       </div>
 
-      {/* Round progress bar */}
-      {roundConfig && (
+      {/* Difficulty progress bar */}
+      {difficultySettings && (
         <div className="mt-3">
           <div className="flex justify-between text-sm text-gray-400 mb-1">
-            <span>{roundConfig.title}</span>
-            <span>{roundProgress}/{roundConfig.wordsToComplete} words</span>
+            <span>Round {currentRound} • {difficultySettings.label}</span>
+            <span>{difficultyProgress}/{wordsPerDifficulty} words</span>
           </div>
           <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
             <div 
-              className={`h-full bg-gradient-to-r ${roundConfig.color} transition-all duration-300`}
+              className={`h-full bg-gradient-to-r ${difficultySettings.color} transition-all duration-300`}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -226,38 +238,52 @@ export const LevelUpNotification = memo(function LevelUpNotification({ level, on
   );
 });
 
+// Difficulty upgrade notification
+export const DifficultyUpNotification = memo(function DifficultyUpNotification({ difficulty, difficultySettings, onComplete }) {
+  return (
+    <div
+      className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none level-up-flash"
+      onAnimationEnd={onComplete}
+    >
+      <div className="text-center">
+        <div className="text-5xl font-black text-green-400 neon-text mb-2">
+          ⬆️ DIFFICULTY UP!
+        </div>
+        <div className={`text-4xl font-bold bg-gradient-to-r ${difficultySettings?.color || 'from-yellow-400 to-orange-500'} bg-clip-text text-transparent neon-text`}>
+          {difficultySettings?.label || difficulty}
+        </div>
+        <div className="text-xl text-gray-300 mt-2">
+          20 more words to go!
+        </div>
+      </div>
+    </div>
+  );
+});
+
 // Round selection screen
-export const RoundSelect = memo(function RoundSelect({ onSelectRound, totalRounds }) {
+export const RoundSelectScreen = memo(function RoundSelectScreen({ onSelectRound }) {
   const roundInfo = [
     {
       round: 1,
-      title: 'आ की मात्रा',
-      subtitle: 'Normal + आ matra',
-      description: 'बुनियादी शब्द और आ की मात्रा',
+      title: 'Round 1',
       color: 'from-green-500 to-emerald-600',
       emoji: '🌱',
     },
     {
       round: 2,
-      title: 'सभी मात्राएं',
-      subtitle: 'इ, ई, उ, ऊ, ए, ऐ, ओ, औ',
-      description: 'सभी स्वर मात्राओं वाले शब्द',
+      title: 'Round 2',
       color: 'from-blue-500 to-cyan-600',
       emoji: '⚡',
     },
     {
       round: 3,
-      title: 'तीन अक्षर',
-      subtitle: 'Three-letter + All matras',
-      description: 'तीन अक्षर वाले जटिल शब्द',
+      title: 'Round 3',
       color: 'from-purple-500 to-pink-600',
       emoji: '🎯',
     },
     {
       round: 4,
-      title: 'PRO Level',
-      subtitle: 'Complex & Hardest',
-      description: 'अखबार और मीडिया के कठिन शब्द',
+      title: 'Round 4',
       color: 'from-red-500 to-orange-600',
       emoji: '🔥',
     },
@@ -274,37 +300,25 @@ export const RoundSelect = memo(function RoundSelect({ onSelectRound, totalRound
         <span>Home</span>
       </Link>
 
-      <div className="text-center p-8 max-w-2xl">
-        <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mb-2">
+      <div className="text-center p-8 max-w-xl">
+        <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 mb-8">
           SELECT ROUND
         </h1>
-        <p className="text-gray-400 text-lg mb-8">
-          Choose your practice round
-        </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {roundInfo.map((info) => (
             <button
               key={info.round}
               onClick={() => onSelectRound(info.round)}
               className={`p-6 bg-gradient-to-r ${info.color} text-white font-bold rounded-xl
-                         hover:scale-105 transition-all duration-300 text-left
+                         hover:scale-105 transition-all duration-300
                          border-2 border-white/20 hover:border-white/50`}
             >
-              <div className="flex items-start justify-between mb-2">
-                <span className="text-3xl">{info.emoji}</span>
-                <span className="text-sm bg-white/20 px-2 py-1 rounded">Round {info.round}</span>
-              </div>
-              <div className="text-2xl font-bold mb-1">{info.title}</div>
-              <div className="text-sm opacity-80 mb-2">{info.subtitle}</div>
-              <div className="text-xs opacity-70">{info.description}</div>
+              <div className="text-4xl mb-2">{info.emoji}</div>
+              <div className="text-xl font-bold">{info.title}</div>
             </button>
           ))}
         </div>
-
-        <p className="text-gray-500 text-sm mt-8">
-          Complete each round to unlock mastery! 🎮
-        </p>
       </div>
     </div>
   );
@@ -520,12 +534,14 @@ export const RoundCompleteScreen = memo(function RoundCompleteScreen({
 // Game over screen
 export const GameOverScreen = memo(function GameOverScreen({ 
   score, 
-  currentRound, 
+  currentRound,
+  difficulty,
+  difficultyProgress,
+  wordsPerDifficulty,
+  difficultySettings,
   wpm, 
   accuracy, 
   wordsDestroyed, 
-  roundProgress,
-  roundConfig,
   onRestart, 
   onHome 
 }) {
@@ -542,8 +558,14 @@ export const GameOverScreen = memo(function GameOverScreen({
             <span className="text-purple-400 font-bold">{currentRound}/4</span>
           </div>
           <div className="flex justify-between text-xl">
+            <span className="text-gray-400">Difficulty:</span>
+            <span className={`font-bold bg-gradient-to-r ${difficultySettings?.color || 'from-gray-400 to-gray-500'} bg-clip-text text-transparent`}>
+              {difficultySettings?.label || difficulty}
+            </span>
+          </div>
+          <div className="flex justify-between text-xl">
             <span className="text-gray-400">Progress:</span>
-            <span className="text-cyan-400 font-bold">{roundProgress}/{roundConfig?.wordsToComplete || 0}</span>
+            <span className="text-cyan-400 font-bold">{difficultyProgress}/{wordsPerDifficulty}</span>
           </div>
           <div className="flex justify-between text-xl">
             <span className="text-gray-400">Final Score:</span>
@@ -620,15 +642,21 @@ export const GameCompleteScreen = memo(function GameCompleteScreen({ score, onHo
 // Pause screen overlay
 export const PauseScreen = memo(function PauseScreen({ 
   currentRound, 
+  difficulty,
+  difficultyProgress,
+  wordsPerDifficulty,
+  difficultySettings,
+  allDifficultySettings,
   score, 
   lives, 
   maxLives,
-  roundProgress,
-  roundConfig,
   onResume, 
-  onRestart, 
+  onRestart,
+  onChangeDifficulty,
   onHome 
 }) {
+  const difficultyOrder = ['beginner', 'normal', 'hard'];
+  
   return (
     <div className="absolute inset-0 flex items-center justify-center z-50 bg-black/85 backdrop-blur-md">
       {/* Animated pause icon */}
@@ -655,8 +683,14 @@ export const PauseScreen = memo(function PauseScreen({
             <span className="text-cyan-400 font-bold">{currentRound} / 4</span>
           </div>
           <div className="flex justify-between items-center text-lg">
+            <span className="text-gray-400">Difficulty</span>
+            <span className={`font-bold bg-gradient-to-r ${difficultySettings?.color || 'from-gray-400 to-gray-500'} bg-clip-text text-transparent`}>
+              {difficultySettings?.label || difficulty}
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-lg">
             <span className="text-gray-400">Progress</span>
-            <span className="text-green-400 font-bold">{roundProgress} / {roundConfig?.wordsToComplete || 15}</span>
+            <span className="text-green-400 font-bold">{difficultyProgress} / {wordsPerDifficulty}</span>
           </div>
           <div className="flex justify-between items-center text-lg">
             <span className="text-gray-400">Score</span>
@@ -665,6 +699,30 @@ export const PauseScreen = memo(function PauseScreen({
           <div className="flex justify-between items-center text-lg">
             <span className="text-gray-400">Lives</span>
             <span className="text-red-400 font-bold">{'❤️'.repeat(lives)} {'🖤'.repeat(maxLives - lives)}</span>
+          </div>
+        </div>
+
+        {/* Change Difficulty Section */}
+        <div className="mb-6">
+          <p className="text-gray-400 text-sm mb-3">Change Difficulty (Practice Mode)</p>
+          <div className="flex gap-2 justify-center">
+            {difficultyOrder.map((diff) => {
+              const settings = allDifficultySettings[diff];
+              const isActive = diff === difficulty;
+              return (
+                <button
+                  key={diff}
+                  onClick={() => !isActive && onChangeDifficulty(diff)}
+                  className={`px-4 py-2 rounded-lg font-bold text-sm transition-all duration-200 ${
+                    isActive 
+                      ? `bg-gradient-to-r ${settings.color} text-white border-2 border-white/50` 
+                      : 'bg-gray-700/50 text-gray-400 hover:bg-gray-600 hover:text-white border border-gray-600'
+                  }`}
+                >
+                  {settings.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -690,7 +748,7 @@ export const PauseScreen = memo(function PauseScreen({
           >
             <span className="flex items-center justify-center gap-2">
               <span>🔄</span>
-              Restart Round
+              Restart Difficulty
             </span>
           </button>
           
@@ -702,7 +760,7 @@ export const PauseScreen = memo(function PauseScreen({
           >
             <span className="flex items-center justify-center gap-2">
               <span>🏠</span>
-              Main Menu
+              Back to Round Select
             </span>
           </button>
         </div>
