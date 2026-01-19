@@ -78,3 +78,46 @@ export const calculateAccuracy = (correctChars, totalChars) => {
   if (totalChars === 0) return 100;
   return Math.round((correctChars / totalChars) * 100);
 };
+
+// Hindi matras (vowel signs) that can be attached to consonants
+const HINDI_MATRAS = [
+  '\u093E', // ा (aa)
+  '\u093F', // ि (i)
+  '\u0940', // ी (ii)
+  '\u0941', // ु (u)
+  '\u0942', // ू (uu)
+  '\u0943', // ृ (ri)
+  '\u0944', // ॄ (rii)
+  '\u0945', // ॅ (candra e)
+  '\u0946', // ॆ (short e)
+  '\u0947', // े (e)
+  '\u0948', // ै (ai)
+  '\u0949', // ॉ (candra o)
+  '\u094A', // ॊ (short o)
+  '\u094B', // ो (o)
+  '\u094C', // ौ (au)
+  '\u094D', // ् (halant/virama)
+  '\u0902', // ं (anusvara)
+  '\u0903', // ः (visarga)
+  '\u0901', // ँ (chandrabindu)
+];
+
+// Remove last character from Hindi text - removes matra first if present
+export const removeLastHindiChar = (text) => {
+  if (!text || text.length === 0) return '';
+  
+  const lastChar = text[text.length - 1];
+  
+  // Check if the last character is a matra/modifier
+  if (HINDI_MATRAS.includes(lastChar)) {
+    // Just remove the matra
+    return text.slice(0, -1);
+  }
+  
+  // If not a matra, remove the entire last grapheme cluster
+  const graphemes = splitIntoGraphemes(text);
+  if (graphemes.length > 0) {
+    graphemes.pop();
+  }
+  return graphemes.join('');
+};

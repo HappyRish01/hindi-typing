@@ -5,6 +5,7 @@ import {
   getMaxEnemiesForLevel,
   generateId,
   splitIntoGraphemes,
+  removeLastHindiChar,
   calculateWPM,
   calculateAccuracy,
   getRandomWordForRound,
@@ -445,11 +446,8 @@ export function useGameState(autoStart = false) {
       e.preventDefault();
       setCurrentInput(prev => {
         if (!prev) return prev;
-        const graphemes = splitIntoGraphemes(prev);
-        if (graphemes.length > 0) {
-          graphemes.pop();
-        }
-        return graphemes.join('');
+        // Remove matra first if present, otherwise remove whole grapheme
+        return removeLastHindiChar(prev);
       });
       return;
     }

@@ -185,3 +185,13 @@ body {
 .cursor-blink {
   animation: blink 1s step-end infinite;
 }
+
+/* Shimmer effect for progress bars */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}

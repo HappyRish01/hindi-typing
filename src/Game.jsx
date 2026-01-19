@@ -95,7 +95,15 @@ function Game() {
   }, [activeTargetId, currentInput]);
 
   return (
-    <div className="relative w-screen h-screen bg-gradient-to-b from-gray-900 via-purple-950 to-black overflow-hidden">
+    <div className="relative w-screen h-screen bg-[#0a0a12] overflow-hidden">
+      {/* Colorful animated gradient background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 -left-32 w-[600px] h-[600px] bg-gradient-to-br from-violet-600/30 via-fuchsia-500/20 to-pink-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute top-1/4 -right-32 w-[500px] h-[500px] bg-gradient-to-bl from-cyan-400/30 via-sky-500/20 to-blue-600/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
+        <div className="absolute -bottom-32 left-1/4 w-[600px] h-[600px] bg-gradient-to-tr from-amber-500/20 via-orange-500/15 to-rose-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
+        <div className="absolute bottom-1/3 right-1/3 w-[400px] h-[400px] bg-gradient-to-tl from-emerald-400/20 via-teal-500/15 to-cyan-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '9s', animationDelay: '1s' }} />
+      </div>
+
       {/* Audio elements for sound effects */}
       <audio ref={wordCompleteSoundRef} src="/sounds/word-complete.mp3" preload="auto" />
       <audio ref={lifeLostSoundRef} src="/sounds/life-lost.mp3" preload="auto" />
